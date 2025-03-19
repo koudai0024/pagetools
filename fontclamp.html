@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS clamp() 計算ツール</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        label, input { display: block; margin-bottom: 10px; }
+        .result { margin-top: 20px; font-weight: bold; }
+        button { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>CSS clamp() 計算ツール</h2>
+    <label>基準文字サイズ (px): <input type="number" id="baseSize" value="16"></label>
+    <label>文字サイズの倍率: <input type="number" id="scaleFactor" value="1"></label>
+    <label>変化率: <input type="number" id="growthRate" value="2"></label>
+    <label>最小画面幅 (px): <input type="number" id="minWidth" value="720"></label>
+    <label>最大画面幅 (px): <input type="number" id="maxWidth" value="1280"></label>
+    <button onclick="calculateClamp()">計算</button>
+    <div class="result" id="result"></div>
+    <button onclick="copyToClipboard()" id="copyButton" style="display:none;">コピー</button>
+
+    <script>
+        function calculateClamp() {
+            let baseSize = parseFloat(document.getElementById("baseSize").value);
+            let scaleFactor = parseFloat(document.getElementById("scaleFactor").value);
+            let growthRate = parseFloat(document.getElementById("growthRate").value);
+            let minWidth = parseFloat(document.getElementById("minWidth").value);
+            let maxWidth = parseFloat(document.getElementById("maxWidth").value);
+            
+            let minSize = baseSize * scaleFactor;
+            let maxSize = minSize * growthRate;
+            
+            let minRem = (minSize / 16).toFixed(3) + "rem";
+            let maxRem = (maxSize / 16).toFixed(3) + "rem";
+            let slope = ((maxSize - minSize) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
+            let interceptRem = ((minSize - ((maxSize - minSize) / (maxWidth - minWidth) * minWidth)) / 16).toFixed(3) + "rem";
+            
+            let clampValue = `clamp(${minRem}, ${interceptRem} + ${slope}, ${maxRem})`;
+            document.getElementById("result").innerText = "CSS clamp(): " + clampValue;
+            
+            let copyButton = document.getElementById("copyButton");
+            copyButton.style.display = "block";
+            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小文字サイズ"+minSize+"px, 最大文字サイズ"+maxSize+"px, 最小画面幅"+minWidth+"px, 最大画面幅"+maxWidth+"px */");
+        }
+
+        function copyToClipboard() {
+            let clampValue = document.getElementById("copyButton").getAttribute("data-clipboard");
+            navigator.clipboard.writeText(clampValue).then(() => {
+                alert("コピーしました: " + clampValue);
+            }).catch(err => {
+                console.error("コピーに失敗しました", err);
+            });
+        }
+    </script>
+</body>
+</html>
