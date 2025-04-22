@@ -40,6 +40,57 @@
     </style>
 </head>
 <body>
+    <pre>
+        
+/* .test-text {
+  --fz: 2;
+  font-size: var(--font-size);
+} */
+
+/* すべての要素に対してデフォルト設定 */
+*,
+*::before,
+*::after {
+  --base-size: 12; /* 基準フォントサイズ(px) */
+  --growth-rate: 2; /* 変化率 */
+  --min-width: 320; /* 最小画面幅(px) */
+  --max-width: 720; /* 最大画面幅(px) */
+
+  /* 計算部分 */
+  --fz: 1; /* デフォルト倍率 */
+  --min-size: calc(var(--base-size) * var(--fz, 1)); /* 最小サイズ */
+  --max-size: calc(var(--min-size) * var(--growth-rate)); /* 最大サイズ */
+  --slope: calc(
+    (var(--max-size) - var(--min-size)) / (var(--max-width) - var(--min-width)) *
+      100vw
+  );
+  --intercept: calc(
+    var(--min-size) -
+      (
+        (var(--max-size) - var(--min-size)) /
+          (var(--max-width) - var(--min-width)) * var(--min-width)
+      )
+  );
+
+  /* フォントサイズの計算 */
+  --font-size: clamp(
+    calc(var(--min-size) * 1px),
+    calc(var(--intercept) * 1px + var(--slope)),
+    calc(var(--max-size) * 1px)
+  );
+}
+
+@media (min-width: 720px) {
+  *,
+  *::before,
+  *::after {
+    --base-size: 16; /* 基準フォントサイズ(px) */
+    --growth-rate: 1.5; /* 変化率 */
+    --min-width: 720; /* 最小画面幅(px) */
+    --max-width: 1280; /* 最大画面幅(px) */
+  }
+}
+    </pre>
     <h2>CSS clamp() 計算ツール</h2>
     <label>基準文字サイズ (px): <input type="number" id="baseSize" value="16"></label>
     <label>文字サイズの倍率: <input type="number" id="scaleFactor" value="1"></label>
