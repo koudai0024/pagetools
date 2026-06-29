@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSS clamp() 計算ツール (rem直接指定版)</title>
+    <title>CSS clamp() 計算ツール (文字rem / 画面px版)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -47,24 +47,24 @@
   font-size: var(--font-size);
 } */
 
-/* すべての要素に対してデフォルト設定 (rem基準) */
+/* すべての要素に対してデフォルト設定 (文字rem / 画面px) */
 *,
 *::before,
 *::after {
   --min-size-rem: 1;    /* 最小文字サイズ(rem) */
   --max-size-rem: 2;    /* 最大文字サイズ(rem) */
-  --min-width-rem: 20;  /* 最小画面幅(rem) [320px相当] */
-  --max-width-rem: 45;  /* 最大画面幅(rem) [720px相当] */
+  --min-width-px: 320;  /* 最小画面幅(px) */
+  --max-width-px: 720;  /* 最大画面幅(px) */
 
-  /* 傾き(vw)の計算 */
+  /* 傾き(vw)の計算: (max_rem - min_rem) * 16 / (max_width_px - min_width_px) * 100 */
   --slope: calc(
-    (var(--max-size-rem) - var(--min-size-rem)) / (var(--max-width-rem) - var(--min-width-rem)) * 100vw
+    (var(--max-size-rem) - var(--min-size-rem)) * 16 / (var(--max-width-px) - var(--min-width-px)) * 100vw
   );
   
   /* 切片(rem)の計算 */
   --intercept: calc(
     var(--min-size-rem) - 
-    ((var(--max-size-rem) - var(--min-size-rem)) / (var(--max-width-rem) - var(--min-width-rem)) * var(--min-width-rem))
+    ((var(--max-size-rem) - var(--min-size-rem)) * 16 / (var(--max-width-px) - var(--min-width-px)) * var(--min-width-px) / 16)
   );
 
   /* フォントサイズの計算 */
@@ -75,19 +75,19 @@
   );
 }
 
-@media (min-width: 45rem) { /* 720px相当 */
+@media (min-width: 720px) {
   *,
   *::before,
   *::after {
     --min-size-rem: 1.25; /* 最小文字サイズ(rem) */
     --max-size-rem: 2.5;  /* 最大文字サイズ(rem) */
-    --min-width-rem: 45;  /* 最小画面幅(rem) [720px相当] */
-    --max-width-rem: 80;  /* 最大画面幅(rem) [1280px相当] */
+    --min-width-px: 720;  /* 最小画面幅(px) */
+    --max-width-px: 1280; /* 最大画面幅(px) */
   }
 }
     </pre>
 
-    <h2>CSS clamp() 計算ツール (rem直接指定)</h2>
+    <h2>CSS clamp() 計算ツール (文字rem / 画面px)</h2>
     <label>最小文字サイズ (rem): <input type="number" id="minSizeRem" value="1" step="0.0625"></label>
     <label>最大文字サイズ (rem): <input type="number" id="maxSizeRem" value="2" step="0.0625"></label>
     <label>最小画面幅 (px): <input type="number" id="minWidth" value="320"></label>
@@ -98,7 +98,7 @@
 
     <script>
         function calculateClamp() {
-            // 1rem = 16px を基準として画面幅をrem換算
+            // 1rem = 16px
             const rootPx = 16;
 
             let minSizeRem = parseFloat(document.getElementById("minSizeRem").value);
@@ -106,15 +106,16 @@
             let minWidthPx = parseFloat(document.getElementById("minWidth").value);
             let maxWidthPx = parseFloat(document.getElementById("maxWidth").value);
             
-            // 画面幅を px から rem に変換
-            let minWidthRem = minWidthPx / rootPx;
-            let maxWidthRem = maxWidthPx / rootPx;
+            // 計算用に文字サイズを一時的にpxに変換
+            let minSizePx = minSizeRem * rootPx;
+            let maxSizePx = maxSizeRem * rootPx;
             
-            // 傾き(vw)の計算: (max_rem - min_rem) / (max_width_rem - min_width_rem) * 100
-            let slope = ((maxSizeRem - minSizeRem) / (maxWidthRem - minWidthRem) * 100);
+            // 傾き(vw)の計算: (max_px - min_px) / (max_width_px - min_width_px) * 100
+            let slope = ((maxSizePx - minSizePx) / (maxWidthPx - minWidthPx) * 100);
             
-            // 切片(rem)の計算: min_rem - (傾き * min_width_rem)
-            let interceptRem = minSizeRem - ((maxSizeRem - minSizeRem) / (maxWidthRem - minWidthRem) * minWidthRem);
+            // 切片(rem)の計算: (min_px - (傾き * min_width_px)) / 16
+            let interceptPx = minSizePx - ((maxSizePx - minSizePx) / (maxWidthPx - minWidthPx) * minWidthPx);
+            let interceptRem = interceptPx / rootPx;
             
             // 文字列整形 (小数点第3位まで)
             let minStr = minSizeRem.toFixed(3) + "rem";
@@ -130,9 +131,9 @@
             let copyButton = document.getElementById("copyButton");
             copyButton.style.display = "block";
             
-            // コメント用にpx換算値も計算
-            let minPx = (minSizeRem * rootPx).toFixed(1);
-            let maxPx = (maxSizeRem * rootPx).toFixed(1);
+            // コメント用
+            let minPx = minSizePx.toFixed(1);
+            let maxPx = maxSizePx.toFixed(1);
             
             copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小:" + minStr + " (" + minPx + "px), 最大:" + maxStr + " (" + maxPx + "px) | 画面幅:" + minWidthPx + "px〜" + maxWidthPx + "px */");
         }
