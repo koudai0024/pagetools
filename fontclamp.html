@@ -38,7 +38,7 @@
         button:hover {
             background-color: #3700b3;
         }
-    </style>
+    </pre>
 </head>
 <body>
     <pre>
@@ -46,23 +46,19 @@
 *,
 *::before,
 *::after {
-  --root-size: 16;    /* 1remあたりのベースpx数 (環境に合わせて変更) */
   --min-size: 1rem;   /* 最小文字サイズ(rem) */
   --max-size: 1.5rem; /* 最大文字サイズ(rem) */
   --min-width: 720;   /* 最小画面幅(px) */
   --max-width: 1280;  /* 最大画面幅(px) */
 
-  /* 計算部分 (ベースpx数を掛け算してpxを割り出す) */
-  --min-px: calc(var(--min-size) * var(--root-size));
-  --max-px: calc(var(--max-size) * var(--root-size));
-
+  /* 計算部分 (すべて純粋な数値・remとして計算) */
   --slope: calc(
-    (var(--max-px) - var(--min-px)) / (var(--max-width) - var(--min-width)) * 100vw
+    (var(--max-size) - var(--min-size)) / (var(--max-width) - var(--min-width)) * 100vw
   );
   --intercept: calc(
-    var(--min-px) -
+    var(--min-size) -
       (
-        (var(--max-px) - var(--min-px)) /
+        (var(--max-size) - var(--min-size)) /
           (var(--max-width) - var(--min-width)) * var(--min-width)
       )
   );
@@ -70,16 +66,13 @@
   /* フォントサイズの計算 */
   --font-size: clamp(
     var(--min-size),
-    calc(var(--intercept) * 1px + var(--slope)),
+    calc(var(--intercept) + var(--slope)),
     var(--max-size)
   );
 }
     </pre>
 
     <h2>CSS clamp() 計算ツール</h2>
-    <label>1rem の基準サイズ (px): <input type="number" id="rootSize" value="16"></label>
-    <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
-    
     <label>最小文字サイズ (rem): <input type="number" id="minSize" value="1" step="0.01"></label>
     <label>最大文字サイズ (rem): <input type="number" id="maxSize" value="1.5" step="0.01"></label>
     <label>最小画面幅 (px): <input type="number" id="minWidth" value="720"></label>
@@ -90,36 +83,29 @@
 
     <script>
         function calculateClamp() {
-            // ユーザーが任意に決めた1remあたりのpx基準値を取得
-            let rootSize = parseFloat(document.getElementById("rootSize").value);
-
             let minRemVal = parseFloat(document.getElementById("minSize").value);
             let maxRemVal = parseFloat(document.getElementById("maxSize").value);
             let minWidth = parseFloat(document.getElementById("minWidth").value);
             let maxWidth = parseFloat(document.getElementById("maxWidth").value);
             
-            // 入力された rem 値を元に、内部計算用の px 値を算出
-            let minSizePx = minRemVal * rootSize;
-            let maxSizePx = maxRemVal * rootSize;
-            
             // 最小・最大値を rem 単位の文字列にする
             let minRem = minRemVal.toFixed(3) + "rem";
             let maxRem = maxRemVal.toFixed(3) + "rem";
             
-            // 傾き(slope)の計算 [vw]
-            let slope = ((maxSizePx - minSizePx) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
+            // 傾き(slope)の計算 [vw] (100を掛けてvw単位にする)
+            let slope = ((maxRemVal - minRemVal) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
             
-            // 切片(intercept)を px 値で計算
-            let interceptPx = (minSizePx - ((maxSizePx - minSizePx) / (maxWidth - minWidth) * minWidth)).toFixed(3) + "px";
+            // 切片(intercept)を rem 値で計算
+            let interceptRem = (minRemVal - ((maxRemVal - minRemVal) / (maxWidth - minWidth) * minWidth)).toFixed(3) + "rem";
             
             // 計算結果の組み立て
-            let clampValue = `clamp(${minRem}, ${interceptPx} + ${slope}, ${maxRem})`;
+            let clampValue = `clamp(${minRem}, ${interceptRem} + ${slope}, ${maxRem})`;
             
             document.getElementById("result").innerText = "CSS clamp(): " + clampValue;
             
             let copyButton = document.getElementById("copyButton");
             copyButton.style.display = "block";
-            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 基準: 1rem=" + rootSize + "px, 最小" + minRem + " (" + minSizePx + "px), 最大" + maxRem + " (" + maxSizePx + "px), 画面幅" + minWidth + "px〜" + maxWidth + "px */");
+            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小" + minRem + ", 最大" + maxRem + ", 画面幅" + minWidth + "px〜" + maxWidth + "px */");
         }
 
         function copyToClipboard() {
