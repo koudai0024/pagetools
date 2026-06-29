@@ -46,41 +46,32 @@
 *,
 *::before,
 *::after {
-  --min-size: 16;  /* 最小文字サイズ(px) */
-  --max-size: 24;  /* 最大文字サイズ(px) */
-  --min-width: 320; /* 最小画面幅(px) */
-  --max-width: 720; /* 最大画面幅(px) */
+  --min-size: 1rem;   /* 最小文字サイズ(rem) */
+  --max-size: 1.5rem; /* 最大文字サイズ(rem) */
+  --min-width: 720;   /* 最小画面幅(px) */
+  --max-width: 1280;  /* 最大画面幅(px) */
 
-  /* 計算部分 */
+  /* 計算部分 (1rem = 16px換算でpxを割り出して計算) */
+  --min-px: calc(var(--min-size) * 16);
+  --max-px: calc(var(--max-size) * 16);
+
   --slope: calc(
-    (var(--max-size) - var(--min-size)) / (var(--max-width) - var(--min-width)) *
-      100vw
+    (var(--max-px) - var(--min-px)) / (var(--max-width) - var(--min-width)) * 100vw
   );
   --intercept: calc(
-    var(--min-size) -
+    var(--min-px) -
       (
-        (var(--max-size) - var(--min-size)) /
+        (var(--max-px) - var(--min-px)) /
           (var(--max-width) - var(--min-width)) * var(--min-width)
       )
   );
 
   /* フォントサイズの計算 */
   --font-size: clamp(
-    calc(var(--min-size) * 1px),
+    var(--min-size),
     calc(var(--intercept) * 1px + var(--slope)),
-    calc(var(--max-size) * 1px)
+    var(--max-size)
   );
-}
-
-@media (min-width: 720px) {
-  *,
-  *::before,
-  *::after {
-    --min-size: 24;   /* 最小文字サイズ(px) */
-    --max-size: 36;   /* 最大文字サイズ(px) */
-    --min-width: 720;  /* 最小画面幅(px) */
-    --max-width: 1280; /* 最大画面幅(px) */
-  }
 }
     </pre>
 
@@ -100,28 +91,24 @@
             let minWidth = parseFloat(document.getElementById("minWidth").value);
             let maxWidth = parseFloat(document.getElementById("maxWidth").value);
             
-            // rem変換用の基準値（ブラウザのデフォルト16px）
+            // 最小・最大値を rem に変換
             let minRem = (minSize / 16).toFixed(3) + "rem";
             let maxRem = (maxSize / 16).toFixed(3) + "rem";
             
-            // 傾き(slope)と切片(intercept)の計算
+            // 傾き(slope)の計算 [vw]
             let slope = ((maxSize - minSize) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
-            let interceptRem = ((minSize - ((maxSize - minSize) / (maxWidth - minWidth) * minWidth)) / 16).toFixed(3) + "rem";
             
-            // + の前後のスペース調整と負の数の見栄え考慮
-            let interceptValue = parseFloat(interceptRem);
-            let clampValue = "";
-            if (interceptValue < 0) {
-                clampValue = `clamp(${minRem}, ${interceptRem} + ${slope}, ${maxRem})`;
-            } else {
-                clampValue = `clamp(${minRem}, ${interceptRem} + ${slope}, ${maxRem})`;
-            }
+            // 切片(intercept)を px のまま計算
+            let interceptPx = (minSize - ((maxSize - minSize) / (maxWidth - minWidth) * minWidth)).toFixed(3) + "px";
+            
+            // 計算結果の組み立て
+            let clampValue = `clamp(${minRem}, ${interceptPx} + ${slope}, ${maxRem})`;
             
             document.getElementById("result").innerText = "CSS clamp(): " + clampValue;
             
             let copyButton = document.getElementById("copyButton");
             copyButton.style.display = "block";
-            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小文字サイズ"+minSize+"px, 最大文字サイズ"+maxSize+"px, 最小画面幅"+minWidth+"px, 最大画面幅"+maxWidth+"px */");
+            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小文字サイズ"+minSize+"px ("+minRem+"), 最大文字サイズ"+maxSize+"px ("+maxRem+"), 最小画面幅"+minWidth+"px, 最大画面幅"+maxWidth+"px */");
         }
 
         function copyToClipboard() {
