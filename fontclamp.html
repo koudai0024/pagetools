@@ -46,14 +46,15 @@
 *,
 *::before,
 *::after {
+  --root-size: 16;    /* 1remあたりのベースpx数 (環境に合わせて変更) */
   --min-size: 1rem;   /* 最小文字サイズ(rem) */
   --max-size: 1.5rem; /* 最大文字サイズ(rem) */
   --min-width: 720;   /* 最小画面幅(px) */
   --max-width: 1280;  /* 最大画面幅(px) */
 
-  /* 計算部分 (1rem = 16px換算でpxを割り出して計算) */
-  --min-px: calc(var(--min-size) * 16);
-  --max-px: calc(var(--max-size) * 16);
+  /* 計算部分 (ベースpx数を掛け算してpxを割り出す) */
+  --min-px: calc(var(--min-size) * var(--root-size));
+  --max-px: calc(var(--max-size) * var(--root-size));
 
   --slope: calc(
     (var(--max-px) - var(--min-px)) / (var(--max-width) - var(--min-width)) * 100vw
@@ -76,8 +77,11 @@
     </pre>
 
     <h2>CSS clamp() 計算ツール</h2>
-    <label>最小文字サイズ (px): <input type="number" id="minSize" value="16"></label>
-    <label>最大文字サイズ (px): <input type="number" id="maxSize" value="24"></label>
+    <label>1rem の基準サイズ (px): <input type="number" id="rootSize" value="16"></label>
+    <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+    
+    <label>最小文字サイズ (rem): <input type="number" id="minSize" value="1" step="0.01"></label>
+    <label>最大文字サイズ (rem): <input type="number" id="maxSize" value="1.5" step="0.01"></label>
     <label>最小画面幅 (px): <input type="number" id="minWidth" value="720"></label>
     <label>最大画面幅 (px): <input type="number" id="maxWidth" value="1280"></label>
     <button onclick="calculateClamp()">計算</button>
@@ -86,20 +90,27 @@
 
     <script>
         function calculateClamp() {
-            let minSize = parseFloat(document.getElementById("minSize").value);
-            let maxSize = parseFloat(document.getElementById("maxSize").value);
+            // ユーザーが任意に決めた1remあたりのpx基準値を取得
+            let rootSize = parseFloat(document.getElementById("rootSize").value);
+
+            let minRemVal = parseFloat(document.getElementById("minSize").value);
+            let maxRemVal = parseFloat(document.getElementById("maxSize").value);
             let minWidth = parseFloat(document.getElementById("minWidth").value);
             let maxWidth = parseFloat(document.getElementById("maxWidth").value);
             
-            // 最小・最大値を rem に変換
-            let minRem = (minSize / 16).toFixed(3) + "rem";
-            let maxRem = (maxSize / 16).toFixed(3) + "rem";
+            // 入力された rem 値を元に、内部計算用の px 値を算出
+            let minSizePx = minRemVal * rootSize;
+            let maxSizePx = maxRemVal * rootSize;
+            
+            // 最小・最大値を rem 単位の文字列にする
+            let minRem = minRemVal.toFixed(3) + "rem";
+            let maxRem = maxRemVal.toFixed(3) + "rem";
             
             // 傾き(slope)の計算 [vw]
-            let slope = ((maxSize - minSize) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
+            let slope = ((maxSizePx - minSizePx) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
             
-            // 切片(intercept)を px のまま計算
-            let interceptPx = (minSize - ((maxSize - minSize) / (maxWidth - minWidth) * minWidth)).toFixed(3) + "px";
+            // 切片(intercept)を px 値で計算
+            let interceptPx = (minSizePx - ((maxSizePx - minSizePx) / (maxWidth - minWidth) * minWidth)).toFixed(3) + "px";
             
             // 計算結果の組み立て
             let clampValue = `clamp(${minRem}, ${interceptPx} + ${slope}, ${maxRem})`;
@@ -108,7 +119,7 @@
             
             let copyButton = document.getElementById("copyButton");
             copyButton.style.display = "block";
-            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小文字サイズ"+minSize+"px ("+minRem+"), 最大文字サイズ"+maxSize+"px ("+maxRem+"), 最小画面幅"+minWidth+"px, 最大画面幅"+maxWidth+"px */");
+            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 基準: 1rem=" + rootSize + "px, 最小" + minRem + " (" + minSizePx + "px), 最大" + maxRem + " (" + maxSizePx + "px), 画面幅" + minWidth + "px〜" + maxWidth + "px */");
         }
 
         function copyToClipboard() {
