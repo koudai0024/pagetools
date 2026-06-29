@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSS clamp() 計算ツール (文字rem固定 / 画面px版)</title>
+    <title>CSS clamp() 計算ツール</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -20,7 +20,6 @@
             color: #e0e0e0;
             border: 1px solid #555;
             padding: 5px;
-            width: 200px;
         }
         .result {
             margin-top: 20px;
@@ -42,89 +41,94 @@
 </head>
 <body>
     <pre>
+        
+/* .test-text {
+  --fz: 2;
+  font-size: var(--font-size);
+} */
+
 /* すべての要素に対してデフォルト設定 */
 *,
 *::before,
 *::after {
-  --min-size-rem: 1;    /* 最小文字サイズ(rem) */
-  --max-size-rem: 2;    /* 最大文字サイズ(rem) */
-  --min-width-px: 320;  /* 最小画面幅(px) */
-  --max-width-px: 720;  /* 最大画面幅(px) */
+  --base-size: 12; /* 基準フォントサイズ(px) */
+  --growth-rate: 2; /* 変化率 */
+  --min-width: 320; /* 最小画面幅(px) */
+  --max-width: 720; /* 最大画面幅(px) */
 
-  /* 【重要】1remを固定しない計算
-    傾き（slope）は、文字(rem)の差分を画面(px)の差分で割り、100vwを掛けます。
-    （単位としては [rem/px * vw] になりますが、CSSの計算上は数値として処理されます）
-  */
+  /* 計算部分 */
+  --fz: 1; /* デフォルト倍率 */
+  --min-size: calc(var(--base-size) * var(--fz, 1)); /* 最小サイズ */
+  --max-size: calc(var(--min-size) * var(--growth-rate)); /* 最大サイズ */
   --slope: calc(
-    (var(--max-size-rem) - var(--min-size-rem)) / (var(--max-width-px) - var(--min-width-px)) * 100vw
+    (var(--max-size) - var(--min-size)) / (var(--max-width) - var(--min-width)) *
+      100vw
   );
-  
-  /* 切片（intercept）の計算
-    最小サイズ(rem) から「傾き × 最小画面幅(px)」を引きます。
-    ここでもpxとremが混在するため、1remを掛け合わせて単位をremに統一します。
-  */
   --intercept: calc(
-    var(--min-size-rem) * 1rem - 
-    ((var(--max-size-rem) - var(--min-size-rem)) / (var(--max-width-px) - var(--min-width-px)) * var(--min-width-px) * 1rem)
+    var(--min-size) -
+      (
+        (var(--max-size) - var(--min-size)) /
+          (var(--max-width) - var(--min-width)) * var(--min-width)
+      )
   );
 
-  /* フォントサイズの適用 */
+  /* フォントサイズの計算 */
   --font-size: clamp(
-    calc(var(--min-size-rem) * 1rem),
-    calc(var(--intercept) + var(--slope)),
-    calc(var(--max-size-rem) * 1rem)
+    calc(var(--min-size) * 1px),
+    calc(var(--intercept) * 1px + var(--slope)),
+    calc(var(--max-size) * 1px)
   );
 }
-    </pre>
 
-    <h2>CSS clamp() 計算ツール (文字rem / 画面px)</h2>
-    
-    <label>最小文字サイズ (rem): <input type="number" id="minSizeRem" value="1" step="0.1"></label>
-    <label>最大文字サイズ (rem): <input type="number" id="maxSizeRem" value="2" step="0.1"></label>
-    <label>最小画面幅 (px): <input type="number" id="minWidthPx" value="320"></label>
-    <label>最大画面幅 (px): <input type="number" id="maxWidthPx" value="720"></label>
-    
+@media (min-width: 720px) {
+  *,
+  *::before,
+  *::after {
+    --base-size: 16; /* 基準フォントサイズ(px) */
+    --growth-rate: 1.5; /* 変化率 */
+    --min-width: 720; /* 最小画面幅(px) */
+    --max-width: 1280; /* 最大画面幅(px) */
+  }
+}
+    </pre>
+    <h2>CSS clamp() 計算ツール</h2>
+    <label>基準文字サイズ (px): <input type="number" id="baseSize" value="16"></label>
+    <label>文字サイズの倍率: <input type="number" id="scaleFactor" value="1"></label>
+    <label>変化率: <input type="number" id="growthRate" value="2"></label>
+    <label>最小画面幅 (px): <input type="number" id="minWidth" value="720"></label>
+    <label>最大画面幅 (px): <input type="number" id="maxWidth" value="1280"></label>
     <button onclick="calculateClamp()">計算</button>
     <div class="result" id="result"></div>
     <button onclick="copyToClipboard()" id="copyButton" style="display:none;">コピー</button>
 
     <script>
         function calculateClamp() {
-            let minSizeRem = parseFloat(document.getElementById("minSizeRem").value);
-            let maxSizeRem = parseFloat(document.getElementById("maxSizeRem").value);
-            let minWidthPx = parseFloat(document.getElementById("minWidthPx").value);
-            let maxWidthPx = parseFloat(document.getElementById("maxWidthPx").value);
+            let baseSize = parseFloat(document.getElementById("baseSize").value);
+            let scaleFactor = parseFloat(document.getElementById("scaleFactor").value);
+            let growthRate = parseFloat(document.getElementById("growthRate").value);
+            let minWidth = parseFloat(document.getElementById("minWidth").value);
+            let maxWidth = parseFloat(document.getElementById("maxWidth").value);
             
-            // 1) 傾き (vw) の数値を計算
-            // (最大rem - 最小rem) / (最大幅px - 最小幅px) * 100
-            let slope = ((maxSizeRem - minSizeRem) / (maxWidthPx - minWidthPx) * 100);
+            let minSize = baseSize * scaleFactor;
+            let maxSize = minSize * growthRate;
             
-            // 2) 切片 (rem) の数値を計算
-            // 最小rem - ( (最大rem - 最小rem) / (最大幅px - 最小幅px) * 最小幅px )
-            let interceptRem = minSizeRem - (((maxSizeRem - minSizeRem) / (maxWidthPx - minWidthPx)) * minWidthPx);
+            let minRem = (minSize / 16).toFixed(3) + "rem";
+            let maxRem = (maxSize / 16).toFixed(3) + "rem";
+            let slope = ((maxSize - minSize) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
+            let interceptRem = ((minSize - ((maxSize - minSize) / (maxWidth - minWidth) * minWidth)) / 16).toFixed(3) + "rem";
             
-            // 各値の文字列整形 (小数点第3位まで)
-            let minStr = minSizeRem.toFixed(3) + "rem";
-            let maxStr = maxSizeRem.toFixed(3) + "rem";
-            let slopeStr = slope.toFixed(3) + "vw";
-            let interceptStr = (interceptRem >= 0 ? " + " : " - ") + Math.abs(interceptRem).toFixed(3) + "rem";
-            
-            // 最終的な clamp() の文字列を作成
-            // 「切片rem + 傾きvw」の順番で結合
-            let clampValue = `clamp(${minStr}, ${interceptRem.toFixed(3)}rem + ${slopeStr}, ${maxStr})`;
-
+            let clampValue = `clamp(${minRem}, ${interceptRem} + ${slope}, ${maxRem})`;
             document.getElementById("result").innerText = "CSS clamp(): " + clampValue;
             
             let copyButton = document.getElementById("copyButton");
             copyButton.style.display = "block";
-            
-            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小:" + minStr + ", 最大:" + maxStr + " | 画面幅:" + minWidthPx + "px〜" + maxWidthPx + "px */");
+            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小文字サイズ"+minSize+"px, 最大文字サイズ"+maxSize+"px, 最小画面幅"+minWidth+"px, 最大画面幅"+maxWidth+"px */");
         }
 
         function copyToClipboard() {
             let clampValue = document.getElementById("copyButton").getAttribute("data-clipboard");
             navigator.clipboard.writeText(clampValue).then(() => {
-                alert("コピーしました: \n" + clampValue);
+                alert("コピーしました: " + clampValue);
             }).catch(err => {
                 console.error("コピーに失敗しました", err);
             });
