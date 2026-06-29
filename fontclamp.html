@@ -11,16 +11,26 @@
             background-color: #121212;
             color: #e0e0e0;
         }
-        label, input {
+        label, input, select {
             display: block;
             margin-bottom: 10px;
         }
-        input {
+        input, select {
             background-color: #333;
             color: #e0e0e0;
             border: 1px solid #555;
             padding: 5px;
             width: 200px;
+            box-sizing: border-box;
+        }
+        .inline-group {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            margin-bottom: 10px;
+        }
+        .inline-group label, .inline-group select, .inline-group input {
+            margin-bottom: 0;
         }
         .result {
             margin-top: 20px;
@@ -41,62 +51,79 @@
     </style>
 </head>
 <body>
-    <pre>
-/* すべての要素に対してデフォルト設定 */
-*,
-*::before,
-*::after {
-  --min-size: 1rem;   /* 最小文字サイズ(rem) */
-  --max-size: 1.5rem; /* 最大文字サイズ(rem) */
-  --min-width: 720;   /* 最小画面幅(px) */
-  --max-width: 1280;  /* 最大画面幅(px) */
-
-  /* 計算部分 (すべて純粋な数値・remとして計算) */
-  --slope: calc(
-    (var(--max-size) - var(--min-size)) / (var(--max-width) - var(--min-width)) * 100vw
-  );
-  --intercept: calc(
-    var(--min-size) -
-      (
-        (var(--max-size) - var(--min-size)) /
-          (var(--max-width) - var(--min-width)) * var(--min-width)
-      )
-  );
-
-  /* フォントサイズの計算 */
-  --font-size: clamp(
-    var(--min-size),
-    calc(var(--intercept) + var(--slope)),
-    var(--max-size)
-  );
-}
-    </pre>
-
     <h2>CSS clamp() 計算ツール</h2>
-    <label>最小文字サイズ (rem): <input type="number" id="minSize" value="1" step="0.01"></label>
-    <label>最大文字サイズ (rem): <input type="number" id="maxSize" value="1.5" step="0.01"></label>
-    <label>最小画面幅 (px): <input type="number" id="minWidth" value="720"></label>
-    <label>最大画面幅 (px): <input type="number" id="maxWidth" value="1280"></label>
+    
+    <div class="inline-group">
+        <label>1rem の基準単位:
+            <select id="unitType" onchange="toggleUnitHint()">
+                <option value="px">px (ピクセル)</option>
+                <option value="percent">% (パーセント)</option>
+            </select>
+        </label>
+        <label>基準値: 
+            <input type="number" id="baseValue" value="16" step="0.1">
+        </label>
+    </div>
+    <small id="unitHint" style="color: #aaa; display: block; margin-bottom: 15px;">※ブラウザ標準は 16px です</small>
+    
+    <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+
+    <label>最小文字サイズ (rem): <input type="number" id="minSize" value="6" step="0.1"></label>
+    <label>最大文字サイズ (rem): <input type="number" id="maxSize" value="8" step="0.1"></label>
+    <label>最小画面幅 (px): <input type="number" id="minWidth" value="1280"></label>
+    <label>最大画面幅 (px): <input type="number" id="maxWidth" value="1920"></label>
     <button onclick="calculateClamp()">計算</button>
     <div class="result" id="result"></div>
     <button onclick="copyToClipboard()" id="copyButton" style="display:none;">コピー</button>
 
     <script>
+        function toggleUnitHint() {
+            let unitType = document.getElementById("unitType").value;
+            let baseValueInput = document.getElementById("baseValue");
+            let hint = document.getElementById("unitHint");
+            
+            if (unitType === "px") {
+                baseValueInput.value = "16";
+                hint.innerText = "※ブラウザ標準は 16px です（例: 10px など）";
+            } else {
+                baseValueInput.value = "87.5";
+                hint.innerText = "※htmlのfont-sizeに対する%設定（例: 87.5% = 14px換算、62.5% = 10px換算）";
+            }
+        }
+
         function calculateClamp() {
+            let unitType = document.getElementById("unitType").value;
+            let baseValue = parseFloat(document.getElementById("baseValue").value);
+
             let minRemVal = parseFloat(document.getElementById("minSize").value);
             let maxRemVal = parseFloat(document.getElementById("maxSize").value);
             let minWidth = parseFloat(document.getElementById("minWidth").value);
             let maxWidth = parseFloat(document.getElementById("maxWidth").value);
             
-            // 最小・最大値を rem 単位の文字列にする
+            // 選択された単位から、最終的な 1rem あたりの実際の px 数を動的に割り出す
+            let rootPx = 16; // ブラウザの絶対規定値
+            if (unitType === "px") {
+                rootPx = baseValue;
+            } else if (unitType === "percent") {
+                // 例: 87.5% なら 16 * (87.5 / 100) = 14px になる
+                rootPx = 16 * (baseValue / 100);
+            }
+
+            // 正確に算出された rootPx をベースに内部 px を計算（これでバグを完全に回避）
+            let minPx = minRemVal * rootPx;
+            let maxPx = maxRemVal * rootPx;
+
+            // 1. 傾き(slope)の計算 [vw]
+            let slopeVal = ((maxPx - minPx) / (maxWidth - minWidth)) * 100;
+            let slope = slopeVal.toFixed(3) + "vw";
+            
+            // 2. 切片(intercept)を rem 単位で計算
+            let interceptPxVal = minPx - (((maxPx - minPx) / (maxWidth - minWidth)) * minWidth);
+            let interceptRem = (interceptPxVal / rootPx).toFixed(3) + "rem";
+            
+            // 最小・最大値の文字列
             let minRem = minRemVal.toFixed(3) + "rem";
             let maxRem = maxRemVal.toFixed(3) + "rem";
-            
-            // 傾き(slope)の計算 [vw] (100を掛けてvw単位にする)
-            let slope = ((maxRemVal - minRemVal) / (maxWidth - minWidth) * 100).toFixed(3) + "vw";
-            
-            // 切片(intercept)を rem 値で計算
-            let interceptRem = (minRemVal - ((maxRemVal - minRemVal) / (maxWidth - minWidth) * minWidth)).toFixed(3) + "rem";
             
             // 計算結果の組み立て
             let clampValue = `clamp(${minRem}, ${interceptRem} + ${slope}, ${maxRem})`;
@@ -105,7 +132,7 @@
             
             let copyButton = document.getElementById("copyButton");
             copyButton.style.display = "block";
-            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 最小" + minRem + ", 最大" + maxRem + ", 画面幅" + minWidth + "px〜" + maxWidth + "px */");
+            copyButton.setAttribute("data-clipboard", "font-size: " + clampValue + "; /* 計算基準: 1rem=" + rootPx.toFixed(1) + "px、最小" + minRem + "、最大" + maxRem + "、画面幅" + minWidth + "px〜" + maxWidth + "px */");
         }
 
         function copyToClipboard() {
